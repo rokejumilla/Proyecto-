@@ -2,35 +2,34 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class player-1  : MonoBehaviour
+[RequireComponent(typeof(Rigidbody2D))]
+public class Player1 : MonoBehaviour
 {
-    // Variables a configurar desde el editor
-    [Header("Configuracion")]
-    [SerializeField] float velocidad = 5f;
+    [Header("Configuraci�n")]
+    [SerializeField] private float velocidad = 5f;
 
-    // Variables de uso interno en el script
+    // Variables internas
     private float moverHorizontal;
-    private Vector2 direccion;
+    private Rigidbody2D rb;
 
-    // Variable para referenciar otro componente del objeto
-    private Rigidbody2D miRigidbody2D;
-
-    // Codigo ejecutado cuando el objeto se activa en el nivel
-    private void OnEnable()
+    // Se obtiene el Rigidbody2D al inicializar el objeto
+    private void Awake()
     {
-        miRigidbody2D = GetComponent<Rigidbody2D>();
+        rb = GetComponent<Rigidbody2D>();
     }
 
-    // Codigo ejecutado en cada frame del juego (Intervalo variable)
+    // Input por frame (intervalo variable)
     private void Update()
     {
-        moverHorizontal = Input.GetAxis("Horizontal");
-        direccion = new Vector2(moverHorizontal, 0f);
+        // GetAxisRaw para respuesta m�s inmediata; si prefieres suavizado usa GetAxis.
+        moverHorizontal = Input.GetAxisRaw("Horizontal");
     }
+
+    // F�sica (intervalo fijo)
     private void FixedUpdate()
     {
-        miRigidbody2D.AddForce(direccion * velocidad);
+        // Mantener la velocidad vertical actual (gravedad, salto, etc.)
+        rb.linearVelocity = new Vector2(moverHorizontal * velocidad, rb.linearVelocity.y);
     }
 }
 
-    

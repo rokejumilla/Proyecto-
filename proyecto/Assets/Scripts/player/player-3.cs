@@ -2,11 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class player-3 : MonoBehaviour
+public class Player3 : MonoBehaviour
 {
-
     // Variables a configurar desde el editor
-    [Header("Configuracion")]
+    [Header("Configuración")]
     [SerializeField] private float fuerzaSalto = 5f;
 
     // Variables de uso interno en el script
@@ -16,17 +15,18 @@ public class player-3 : MonoBehaviour
     // Variable para referenciar otro componente del objeto
     private Rigidbody2D miRigidbody2D;
 
-    // Codigo ejecutado cuando el objeto se activa en el nivel
-    private void OnEnable()
+    // Se ejecuta al inicio del objeto
+    private void Awake()
     {
         miRigidbody2D = GetComponent<Rigidbody2D>();
     }
 
     // Codigo ejecutado en cada frame del juego (Intervalo variable)
-    void Update()
+    private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space) && puedoSaltar)
         {
+            // Marcamos que debe saltar en el siguiente FixedUpdate
             puedoSaltar = false;
         }
     }
@@ -43,8 +43,9 @@ public class player-3 : MonoBehaviour
     // Codigo ejecutado cuando el jugador colisiona con otro objeto
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        // Al tocar el suelo vuelve a poder saltar
         puedoSaltar = true;
         saltando = false;
     }
-
 }
+
