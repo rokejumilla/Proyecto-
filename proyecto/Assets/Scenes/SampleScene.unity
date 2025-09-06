@@ -119,7 +119,36 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1660057539 &9223372036854775807
+  
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots: []
+
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 469d06d8497978e4299d368c912a9b44, type: 3}
+
+... (resto de tus objetos: pared, techo, piso, torre, player, meta, camera, etc.) ...
+
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 891220720}
+  - {fileID: 908155686}
+  - {fileID: 2078751961}
+  - {fileID: 399677403}
+  - {fileID: 593763073}
+  - {fileID: 1251009376}
+  - {fileID: 567914504}
+  - {fileID: 1957835832}
+  - {fileID: 921814987}
+
