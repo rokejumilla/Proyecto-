@@ -442,7 +442,27 @@ PrefabInstance:
     - target: {fileID: 4726134447590613957, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
       propertyPath: jugador
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 480297637}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1910462927}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[1]'
+      value: 
+      objectReference: {fileID: 37160194}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[2]'
+      value: 
+      objectReference: {fileID: 163382763}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[3]'
+      value: 
+      objectReference: {fileID: 2053988647}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[4]'
+      value: 
+      objectReference: {fileID: 2048997214}
     - target: {fileID: 7387410422969871645, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
       propertyPath: m_Name
       value: Enemy (2)
@@ -452,6 +472,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+--- !u!4 &480297637 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6549344984210783002, guid: 0bdd85bbd5e10754998076b8675e8358, type: 3}
+  m_PrefabInstance: {fileID: 4723550046469646940}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &660326381 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 217222549761907670, guid: 3683d606c7eddaa4a91422224b236fe2, type: 3}
@@ -598,7 +623,27 @@ PrefabInstance:
     - target: {fileID: 4726134447590613957, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
       propertyPath: jugador
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 480297637}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1910462927}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[1]'
+      value: 
+      objectReference: {fileID: 37160194}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[2]'
+      value: 
+      objectReference: {fileID: 163382763}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[3]'
+      value: 
+      objectReference: {fileID: 2053988647}
+    - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
+      propertyPath: 'puntosUI.Array.data[4]'
+      value: 
+      objectReference: {fileID: 2048997214}
     - target: {fileID: 7387410422969871645, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
       propertyPath: m_Name
       value: Enemy (1)
@@ -1818,7 +1863,7 @@ PrefabInstance:
     - target: {fileID: 4726134447590613957, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
       propertyPath: jugador
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 480297637}
     - target: {fileID: 5830103693087042009, guid: 7d7d5d9111f0dfa4a98769bf3ebf910e, type: 3}
       propertyPath: 'puntosUI.Array.data[0]'
       value: 
