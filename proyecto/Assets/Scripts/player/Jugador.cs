@@ -1,12 +1,19 @@
+// Jugador.cs (igual que el tuyo, con estas adiciones)
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using TMPro; // Para usar TextMeshPro
+using TMPro;
+using UnityEngine.Events; // <-- Añadido
 
 public class Jugador : MonoBehaviour
 {
     [Header("Configuración de Vida")]
     [SerializeField] private float vida = 5f;
+
+    // --- NUEVO: evento público para notificar cambios de vida (entero)
+    public UnityEvent<int> OnLivesChanged;
+    // --- NUEVO: propiedad pública para leer vidas como entero
+    public int Lives => Mathf.Clamp(Mathf.RoundToInt(vida), 0, int.MaxValue);
 
     [Header("UI Textos (TextMeshProUGUI)")]
     [SerializeField] private TextMeshProUGUI metaText;     // Texto que aparece al ganar
@@ -34,6 +41,10 @@ public class Jugador : MonoBehaviour
 
         previousFixedDeltaTime = Time.fixedDeltaTime;
         previousTimeScale = Time.timeScale;
+
+        // --- NUEVO: inicializar evento si es null y emitir valor inicial
+        if (OnLivesChanged == null) OnLivesChanged = new UnityEvent<int>();
+        OnLivesChanged.Invoke(Lives);
     }
 
     // Modifica la vida del jugador (puede ser daño o curación)
@@ -41,6 +52,9 @@ public class Jugador : MonoBehaviour
     {
         vida += puntos;
         Debug.Log($"Vida actual: {vida}. ¿Está vivo? {EstasVivo()}");
+
+        // --- NUEVO: notificar a listeners con el valor entero de vidas
+        OnLivesChanged.Invoke(Lives);
 
         if (!EstasVivo())
         {
@@ -70,6 +84,10 @@ public class Jugador : MonoBehaviour
         MostrarTexto(metaText, mensajeMeta);
         FreezeGame();
         Debug.Log("GANASTE");
+
+        // Llamada agregada para avanzar de nivel si existe el ProgressionManager
+        if (ProgressionManager.Instance != null)
+            ProgressionManager.Instance.NextLevel();
     }
 
     // Rutina cuando la vida llega a 0

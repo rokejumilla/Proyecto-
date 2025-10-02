@@ -6,7 +6,7 @@ using TMPro;
 public class Herir : MonoBehaviour
 {
     [Header("Configuración de puntos (máx 5)")]
-    [SerializeField, Tooltip("Cantidad inicial de puntos (máx 5).")]
+    [SerializeField, Tooltip("Cantidad inicial de puntos (máx 1).")]
     private int puntosIniciales = 5;
 
     [Header("TextMeshPro que representan los puntos (0 = punto1 ... 4 = punto5)")]
