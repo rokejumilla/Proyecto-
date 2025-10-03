@@ -1,53 +1,58 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// MainController: método público para cargar la siguiente escena en Build Settings.
+/// Adjuntar al GameObject "MainUI" (Canvas).
+/// </summary>
 public class MainController : MonoBehaviour
 {
-    // Llamar desde el onClick del botón "Jugar"
-    public void CargarSiguienteEscena()
+    [Tooltip("Si es true, al llegar a la última escena vuelve a la primera (índice 0).")]
+    public bool loopToFirst = true;
+
+    /// <summary>
+    /// Carga la siguiente escena según el índice en Build Settings.
+    /// </summary>
+    public void LoadNextScene()
     {
-        // Obtiene el índice de la escena actualmente activa
-        int indiceActual = SceneManager.GetActiveScene().buildIndex;
+        int currentIndex = SceneManager.GetActiveScene().buildIndex; // índice de la escena actual
+        int nextIndex = currentIndex + 1; // siguiente posición
 
-        // Calcula el índice de la siguiente escena
-        int indiceSiguiente = indiceActual + 1;
-
-        // Comprueba que el índice siguiente exista en Build Settings
-        if (indiceSiguiente < SceneManager.sceneCountInBuildSettings)
+        if (nextIndex < SceneManager.sceneCountInBuildSettings)
         {
-            SceneManager.LoadScene(indiceSiguiente);
+            SceneManager.LoadScene(nextIndex);
         }
         else
         {
-            Debug.LogWarning($"No hay más escenas en Build Settings después de la escena {indiceActual}. ÍndiceSiguiente={indiceSiguiente}");
-            // Opcional: volver a la escena 0 (portada) en lugar de hacer nada
-            // SceneManager.LoadScene(0);
+            if (loopToFirst)
+            {
+                SceneManager.LoadScene(0); // vuelve a la primera escena
+            }
+            else
+            {
+                Debug.LogWarning("LoadNextScene: ya estás en la última escena y loopToFirst está desactivado.");
+            }
         }
     }
 
-    // Variante útil: cargar por nombre (si prefieres usar nombres)
-    public void CargarEscenaPorNombre(string nombreEscena)
+    /// <summary>
+    /// Cargar una escena por nombre (alternativa).
+    /// </summary>
+    /// <param name="sceneName">Nombre de la escena tal como está en Build Settings.</param>
+    public void LoadSceneByName(string sceneName)
     {
-        SceneManager.LoadScene(nombreEscena);
+        if (!string.IsNullOrEmpty(sceneName))
+            SceneManager.LoadScene(sceneName);
+        else
+            Debug.LogWarning("LoadSceneByName: sceneName vacío.");
     }
 
-    // Variante: carga asíncrona (útil para pantallas de carga)
-    public void CargarSiguienteEscenaAsync()
+    /// <summary>
+    /// Recarga la escena actual.
+    /// </summary>
+    public void ReloadCurrentScene()
     {
-        int indiceSiguiente = SceneManager.GetActiveScene().buildIndex + 1;
-        if (indiceSiguiente < SceneManager.sceneCountInBuildSettings)
-        {
-            StartCoroutine(CargarAsync(indiceSiguiente));
-        }
-    }
-
-    private System.Collections.IEnumerator CargarAsync(int buildIndex)
-    {
-        AsyncOperation op = SceneManager.LoadSceneAsync(buildIndex);
-        // opcional: mostrar barra de progreso leyendo op.progress
-        while (!op.isDone)
-        {
-            yield return null;
-        }
+        int currentIndex = SceneManager.GetActiveScene().buildIndex;
+        SceneManager.LoadScene(currentIndex);
     }
 }
