@@ -1,40 +1,45 @@
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
+using System.Collections.Generic;
 
-[CreateAssetMenu(menuName = "Progression/LevelData", fileName = "LevelData")]
+[CreateAssetMenu(menuName = "Progression/LevelData", fileName = "LevelData_")]
 public class LevelData : ScriptableObject
 {
-    [Header("Identidad")]
-    public string levelName = "Nivel 1";
-    public float timeLimit = 30f;
+    [Header("Identificación")]
+    public string levelID; // opcional, útil para saves
+    public string displayName;
+    public Sprite thumbnail;
 
-    [Header("Plataformas (instanciación directa)")]
-    public GameObject platformPrefab;
-    public Vector2[] platformPositions;
+    [Header("Escena (opcional)")]
+    [Tooltip("Si el nivel tiene su propia escena, asigna el buildIndex o deja -1 para usar la escena actual")]
+    public int sceneBuildIndex = -1;
 
-    [Header("Enemigos")]
-    public GameObject[] enemyPrefabs;
-    public Vector2[] enemySpawnPositions;
+    [Header("Tiempo y objetivo")]
+    [Tooltip("Tiempo límite en segundos. 0 = sin límite")]
+    public float timeLimit = 0f;
+    public bool hasObjective = false;
+    public string objectiveDescription;
 
-    [Header("Puerta / Meta")]
-    public GameObject doorPrefab;
-    public Vector2 doorPosition;
+    [Header("Spawns / Prefabs")]
+    public List<SpawnEntry> spawns = new List<SpawnEntry>();
 
-    [Header("Tilemap / Nivel")]
-    [Tooltip("Prefab que contenga Grid + Tilemap (editor-friendly). Si usas esto, se instanciará al cargar el nivel.")]
-    public GameObject tilemapPrefab;
+    [Header("Audio / Visual")]
+    public AudioClip music;
+    public Color ambientColor = Color.white;
 
-    [Tooltip("Si prefieres generar el Tilemap desde datos, asigna aquí un CSV (cada celda = índice en tilePalette; -1 = vacío).")]
-    public TextAsset tilemapCSV;
+    [Header("Opciones")]
+    public bool locked = false; // útil para diseño de niveles
+    public int recommendedScoreToUnlock = 0;
+}
 
-    [Tooltip("Paleta de Tiles usada cuando cargas desde CSV (cada índice en CSV apunta a esta lista).")]
-    public TileBase[] tilePalette;
-
-    [Header("Spawns adicionales")]
-    [Tooltip("Prefabs adicionales a instanciar al cargar el nivel (ej: pickups, decoraciones).")]
-    public List<GameObject> additionalPrefabsToSpawn = new List<GameObject>();
-
-    [Tooltip("Origen de instanciación (coordenadas local en el mundo). Evita referenciar Transforms de la escena desde SO.")]
-    public Vector2 spawnOrigin = Vector2.zero;
+[System.Serializable]
+public class SpawnEntry
+{
+    public string name = "Spawn";
+    public GameObject prefab;
+    public Vector3 position;
+    public Vector3 eulerRotation = Vector3.zero;
+    [Tooltip("Cantidad a instanciar (1 por defecto)")]
+    public int count = 1;
+    [Tooltip("Separación entre instancias (si count>1)")]
+    public Vector3 spacing = Vector3.zero;
 }

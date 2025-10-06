@@ -1,249 +1,212 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using System.Collections;
+using System.Collections.Generic;
+using System;
 
 public class ProgressionManager : MonoBehaviour
 {
     public static ProgressionManager Instance { get; private set; }
 
-    [Header("Profile (TDA)")]
-    [SerializeField] private ProgressionProfile profile;
+    [Header("Datos")]
+    [Tooltip("Puedes usar ProgressionData (recomendado) o asignar niveles directamente")]
+    public ProgressionData progressionData;
+    public List<LevelData> fallbackLevels = new List<LevelData>(); // si no asignas progressionData
 
-    [Header("Inicio")]
-    [SerializeField] private int startLevelIndex = 0;
+    [Header("Runtime")]
+    [Tooltip("Contenedor padre donde se instanciarán los objetos del nivel")]
+    public Transform levelContainer;
 
-    // runtime
+    [Tooltip("Guardar/recuperar progreso con esta clave")]
+    public string playerPrefsKey = "CurrentLevelIndex";
+
+    // ReadOnly eliminado: ahora solo SerializeField para que se vea en el Inspector
+    [SerializeField]
     private int currentLevelIndex = 0;
-    private List<GameObject> spawnedObjects = new List<GameObject>();
 
-    private const string SAVE_KEY = "progression_profile_json";
+    private GameObject currentLevelHolder;
+
+    public event Action<LevelData, int> OnLevelLoaded;
+    public event Action<LevelData, int> OnLevelUnloaded;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
     }
 
     private void Start()
     {
-        if (profile == null)
-        {
-            Debug.LogError("ProgressionManager: profile no asignado en inspector.");
-            return;
-        }
+        // Cargar el progress guardado
+        currentLevelIndex = PlayerPrefs.GetInt(playerPrefsKey, 0);
+        LoadCurrentLevel();
+    }
 
-        LoadProfile();
-        currentLevelIndex = Mathf.Clamp(startLevelIndex, 0, Mathf.Max(0, profile.records.Count - 1));
+    private List<LevelData> GetLevelList()
+    {
+        if (progressionData != null && progressionData.levels != null && progressionData.levels.Count > 0)
+            return progressionData.levels;
+        return fallbackLevels;
+    }
+
+    public void LoadCurrentLevel()
+    {
         LoadLevel(currentLevelIndex);
     }
 
-    #region Level Loading
-    public void LoadLevel(int idx)
+    public void LoadLevel(int index)
     {
-        if (profile == null) return;
-        if (idx < 0 || idx >= profile.records.Count)
+        var levels = GetLevelList();
+        if (levels == null || levels.Count == 0)
         {
-            Debug.LogWarning("LoadLevel: índice inválido " + idx);
+            Debug.LogWarning("[ProgressionManager] No hay niveles asignados.");
             return;
         }
 
-        var rec = profile.records[idx];
-        if (rec == null || rec.levelData == null)
-        {
-            Debug.LogWarning("LoadLevel: LevelData nulo en record " + idx);
-            return;
-        }
+        index = Mathf.Clamp(index, 0, levels.Count - 1);
+        currentLevelIndex = index;
+        SaveProgress();
 
-        ClearCurrentLevel();
-        InstantiateLevelFromData(rec.levelData);
-        currentLevelIndex = idx;
-        Debug.Log($"Cargado nivel {idx} ({rec.levelData.name})");
-        // disparar eventos si necesitas
-    }
+        LevelData ld = levels[currentLevelIndex];
 
-    private void ClearCurrentLevel()
-    {
-        for (int i = spawnedObjects.Count - 1; i >= 0; i--)
+        // Si el level tiene escena propia, cargarla (opcional)
+        if (ld.sceneBuildIndex >= 0)
         {
-            if (spawnedObjects[i] != null) Destroy(spawnedObjects[i]);
-        }
-        spawnedObjects.Clear();
-    }
-
-    private void InstantiateLevelFromData(LevelData ld)
-    {
-        // 1 - Plataformas simples (platformPrefab + platformPositions)
-        if (ld.platformPrefab != null && ld.platformPositions != null)
-        {
-            foreach (var pos in ld.platformPositions)
-            {
-                var go = Instantiate(ld.platformPrefab, (Vector3)pos, Quaternion.identity);
-                spawnedObjects.Add(go);
-            }
-        }
-
-        // 2 - Enemigos (matching by index)
-        if (ld.enemyPrefabs != null && ld.enemySpawnPositions != null)
-        {
-            int spawnCount = Math.Min(ld.enemyPrefabs.Length, ld.enemySpawnPositions.Length);
-            for (int i = 0; i < spawnCount; i++)
-            {
-                var prefab = ld.enemyPrefabs[i];
-                var pos = ld.enemySpawnPositions[i];
-                if (prefab != null)
-                {
-                    var go = Instantiate(prefab, (Vector3)pos, Quaternion.identity);
-                    spawnedObjects.Add(go);
-                }
-            }
-        }
-
-        // 3 - Puerta / meta
-        if (ld.doorPrefab != null)
-        {
-            var door = Instantiate(ld.doorPrefab, (Vector3)ld.doorPosition, Quaternion.identity);
-            spawnedObjects.Add(door);
-        }
-
-        // 4 - Tilemap prefab (si existe)
-        if (ld.tilemapPrefab != null)
-        {
-            var tgo = Instantiate(ld.tilemapPrefab);
-            spawnedObjects.Add(tgo);
-        }
-        // 5 - Tilemap desde CSV
-        else if (ld.tilemapCSV != null && ld.tilePalette != null && ld.tilePalette.Length > 0)
-        {
-            GameObject loaderPrefab = Resources.Load<GameObject>("TilemapLoaderPrefab");
-            if (loaderPrefab != null)
-            {
-                var inst = Instantiate(loaderPrefab);
-                spawnedObjects.Add(inst);
-                var loader = inst.GetComponent<TilemapLoader>();
-                if (loader != null)
-                {
-                    loader.LoadFromCSV(ld.tilemapCSV, ld.tilePalette);
-                }
-                else Debug.LogWarning("TilemapLoaderPrefab no tiene TilemapLoader component.");
-            }
-            else
-            {
-                Debug.LogWarning("No se encontró Resources/TilemapLoaderPrefab. Crea un prefab y colócalo en Resources.");
-            }
-        }
-
-        // 6 - Spawns adicionales (usa spawnOrigin como offset)
-        if (ld.additionalPrefabsToSpawn != null)
-        {
-            foreach (var p in ld.additionalPrefabsToSpawn)
-            {
-                if (p == null) continue;
-                var go = Instantiate(p, (Vector3)ld.spawnOrigin, Quaternion.identity);
-                spawnedObjects.Add(go);
-            }
-        }
-
-        // 7 - Ajustar tiempo si LevelData tiene timeLimit (ejemplo)
-        var timer = FindObjectOfType<GameTimer>();
-        if (timer != null)
-        {
-            // Asumimos que GameTimer tiene SetTime(float)
-            timer.SetTime(ld.timeLimit);
-        }
-    }
-    #endregion
-
-    #region Progresión API
-    public void UnlockLevel(int idx)
-    {
-        var r = profile.GetRecord(idx);
-        if (r != null && !r.unlocked)
-        {
-            r.unlocked = true;
-            SaveProfile();
-        }
-    }
-
-    public void SetLevelStars(int idx, int stars)
-    {
-        var r = profile.GetRecord(idx);
-        if (r != null && stars > r.stars)
-        {
-            r.stars = stars;
-            SaveProfile();
-        }
-    }
-
-    public ProgressionProfile.LevelRecord GetCurrentRecord() => profile.GetRecord(currentLevelIndex);
-
-    // --- Método que faltaba: avanzar al siguiente nivel
-    public void NextLevel()
-    {
-        int next = currentLevelIndex + 1;
-        if (next < profile.records.Count)
-        {
-            LoadLevel(next);
+            StartCoroutine(LoadSceneAndInstantiate(ld));
         }
         else
         {
-            Debug.Log("NextLevel: no hay más niveles.");
-            // Aquí podrías reiniciar, volver al menú, etc.
+            InstantiateLevel(ld);
+            OnLevelLoaded?.Invoke(ld, currentLevelIndex);
         }
     }
 
-    public bool HasNextLevel()
+    private IEnumerator LoadSceneAndInstantiate(LevelData ld)
     {
-        return currentLevelIndex + 1 < profile.records.Count;
-    }
-    #endregion
+        // Cargar escena de forma asíncrona (mantiene el ProgressionManager si está en otra escena bajo DontDestroyOnLoad)
+        var ao = SceneManager.LoadSceneAsync(ld.sceneBuildIndex, LoadSceneMode.Single);
+        while (!ao.isDone) yield return null;
 
-    #region Persistencia (PlayerPrefs JSON)
-    [Serializable]
-    private class ProfileSave
-    {
-        public List<bool> unlocked = new List<bool>();
-        public List<int> stars = new List<int>();
+        // Esperar un frame para asegurarse que la escena inicializa
+        yield return null;
+        InstantiateLevel(ld);
+        OnLevelLoaded?.Invoke(ld, currentLevelIndex);
     }
 
-    public void SaveProfile()
+    private void InstantiateLevel(LevelData ld)
     {
-        try
+        ClearCurrentLevel();
+
+        if (levelContainer == null)
         {
-            ProfileSave save = new ProfileSave();
-            foreach (var r in profile.records)
-            {
-                save.unlocked.Add(r.unlocked);
-                save.stars.Add(r.stars);
-            }
-            string json = JsonUtility.ToJson(save);
-            PlayerPrefs.SetString(SAVE_KEY, json);
-            PlayerPrefs.Save();
-            Debug.Log("ProgressionManager: perfil guardado.");
+            // Crear un contenedor temporal si no existe
+            currentLevelHolder = new GameObject("LevelHolder_" + (ld.displayName ?? currentLevelIndex.ToString()));
         }
-        catch (Exception e) { Debug.LogWarning("SaveProfile error: " + e.Message); }
-    }
-
-    public void LoadProfile()
-    {
-        if (!PlayerPrefs.HasKey(SAVE_KEY)) return;
-        try
+        else
         {
-            string json = PlayerPrefs.GetString(SAVE_KEY);
-            var save = JsonUtility.FromJson<ProfileSave>(json);
-            for (int i = 0; i < profile.records.Count && i < save.unlocked.Count; i++)
-            {
-                profile.records[i].unlocked = save.unlocked[i];
-                profile.records[i].stars = save.stars[i];
-            }
-            Debug.Log("ProgressionManager: perfil cargado.");
+            currentLevelHolder = new GameObject("LevelHolder_" + (ld.displayName ?? currentLevelIndex.ToString()));
+            currentLevelHolder.transform.SetParent(levelContainer, false);
         }
-        catch (Exception e) { Debug.LogWarning("LoadProfile error: " + e.Message); }
+
+        foreach (var s in ld.spawns)
+        {
+            if (s.prefab == null) continue;
+            for (int i = 0; i < Mathf.Max(1, s.count); i++)
+            {
+                Vector3 offset = s.spacing * i;
+                Quaternion rot = Quaternion.Euler(s.eulerRotation);
+                Vector3 pos = s.position + offset;
+                var go = Instantiate(s.prefab, pos, rot, currentLevelHolder.transform);
+                go.name = string.IsNullOrEmpty(s.name) ? s.prefab.name : s.name + "_" + i;
+            }
+        }
+
+        // Opcionales: aplicar música, ambiente, timeLimit en GameTimer, etc
+        if (ld.music != null)
+        {
+            // Busca o crea un AudioSource para reproducir la música del nivel
+            var asrc = GetComponent<AudioSource>();
+            if (asrc == null) asrc = gameObject.AddComponent<AudioSource>();
+            asrc.clip = ld.music;
+            asrc.loop = true;
+            asrc.Play();
+        }
+
+        // Manejar timeLimit -> si tienes un GameTimer, deberías llamar a su API aquí.
+        if (ld.timeLimit > 0f)
+        {
+            var timer = FindObjectOfType<GameTimer>();
+            if (timer != null)
+            {
+                timer.SetTime(ld.timeLimit);
+                timer.ResetTimer();
+            }
+        }
     }
 
-    private void OnApplicationQuit()
+    public void ClearCurrentLevel()
     {
-        SaveProfile();
+        if (currentLevelHolder != null)
+        {
+            Destroy(currentLevelHolder);
+            currentLevelHolder = null;
+        }
+        OnLevelUnloaded?.Invoke(null, currentLevelIndex);
     }
-    #endregion
+
+    public void NextLevel()
+    {
+        var levels = GetLevelList();
+        if (levels == null || levels.Count == 0) return;
+        int next = currentLevelIndex + 1;
+        if (next >= levels.Count)
+        {
+            Debug.Log("[ProgressionManager] Llegaste al final de la colección.");
+            return;
+        }
+        LoadLevel(next);
+    }
+
+    public void PrevLevel()
+    {
+        if (currentLevelIndex <= 0) return;
+        LoadLevel(currentLevelIndex - 1);
+    }
+
+    public void RestartLevel()
+    {
+        LoadLevel(currentLevelIndex);
+    }
+
+    public void SaveProgress()
+    {
+        PlayerPrefs.SetInt(playerPrefsKey, currentLevelIndex);
+        PlayerPrefs.Save();
+    }
+
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(playerPrefsKey);
+        currentLevelIndex = 0;
+        SaveProgress();
+    }
+
+    // API pública útil para UI / botones
+    public int GetCurrentLevelIndex() => currentLevelIndex;
+    public int GetTotalLevels() => GetLevelList()?.Count ?? 0;
+    public LevelData GetLevelData(int index)
+    {
+        var list = GetLevelList();
+        if (list == null || index < 0 || index >= list.Count) return null;
+        return list[index];
+    }
 }
