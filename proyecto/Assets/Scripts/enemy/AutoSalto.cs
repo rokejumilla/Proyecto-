@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem; // Importado para consistencia (aunque no lo usamos aquí)
 
 public class AutoSalto : MonoBehaviour
 {
-    [Header("Configuracion")]
-    [SerializeField] private float fuerzaSalto = 5f;
+    [Header("Configuración AutoSalto")]
+    [SerializeField] private float fuerzaSalto = 2.5f;
+    [SerializeField] private LayerMask groundLayer; // asignar la capa de suelo en inspector
+    [SerializeField] private bool soloAlTocarSuelo = true; // si true, solo salta al tocar suelo
 
     private Rigidbody2D miRigidbody2D;
 
@@ -17,9 +18,14 @@ public class AutoSalto : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // Cada vez que toca una superficie, aplica un impulso hacia arriba
+        if (soloAlTocarSuelo)
+        {
+            // comprobamos si la colisión fue con el suelo (por la capa)
+            if (((1 << collision.gameObject.layer) & groundLayer) == 0)
+                return;
+        }
+
+        // Aplicar un impulso pequeño hacia arriba
         miRigidbody2D.AddForce(Vector2.up * fuerzaSalto, ForceMode2D.Impulse);
     }
 }
-
-
