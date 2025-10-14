@@ -1,50 +1,59 @@
-// GeneradorObjectAleatorio.cs
+// GeneradorObjectAleatorio_Shape.cs
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// Spawner aleatorio que usa PoolManager. Se activa/desactiva según la visibilidad del SpriteRenderer.
-/// Opciones:
-/// - prefabs: lista de prefabs a spawnear (cada prefab debe estar registrado en PoolManager o se creará automáticamente).
-/// - poolSizePerPrefab: cantidad inicial por prefab.
-/// - startDelay / intervalo: control temporal.
-/// - randomizePosition: si true, genera la posición dentro de un rectángulo definido por spawnAreaSize (local space).
-/// - useSpawnerConfig: si asignas un SpawnerConfig (ScriptableObject), sus campos sobreescriben las propiedades públicas.
-/// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class GeneradorObjectAleatorio : MonoBehaviour
 {
-    [Header("Prefabs & Pool")]
-    [Tooltip("Lista de prefabs a generar")]
-    public GameObject[] prefabs;
+    public enum SpawnShape { Point, Rectangle, Circle, Annulus }
 
-    [Tooltip("Tamaño del pool por cada prefab al iniciar")]
+    [Header("Prefabs & Pool")]
+    public GameObject[] prefabs;
     [Min(1)] public int poolSizePerPrefab = 10;
 
     [Header("Timing")]
-    [Tooltip("Retraso inicial antes del primer spawn")]
     [Range(0f, 30f)] public float startDelay = 0f;
-
-    [Tooltip("Intervalo entre spawns (segundos)")]
     [Range(0.01f, 30f)] public float intervalo = 1f;
 
-    [Header("Spawn positioning (opcional)")]
-    [Tooltip("Si true, spawnea dentro de un área rectangular local centrada en el transform")]
-    public bool randomizePosition = false;
-    [Tooltip("Tamaño del área de spawn (x = ancho, y = alto) en unidades locales")]
-    public Vector2 spawnAreaSize = new Vector2(1f, 1f);
+    [Header("Spawn shape")]
+    public SpawnShape spawnShape = SpawnShape.Rectangle;
+
+    [Tooltip("Rect area size in local space (width, height)")]
+    public Vector2 spawnAreaSize = new Vector2(4f, 2f);
+
+    [Tooltip("Circle radius (world units)")]
+    [Min(0f)] public float circleRadius = 3f;
+
+    [Tooltip("Annulus min radius (inner)")]
+    [Min(0f)] public float annulusMinRadius = 1f;
+    [Tooltip("Annulus max radius (outer)")]
+    [Min(0f)] public float annulusMaxRadius = 3f;
+
+    [Header("Collision avoidance (opcional)")]
+    [Tooltip("Evita spawnear encima de colliders usando Physics2D. Overlap radius debe ser pequeño")]
+    public bool avoidObstacles = false;
+    [Tooltip("Radio para chequear colisiones al spawnear")]
+    [Min(0f)] public float avoidanceCheckRadius = 0.2f;
+    public LayerMask avoidanceLayerMask = ~0; // por defecto todo
+
+    [Header("Attempts")]
+    [Tooltip("Intentos para encontrar una posición válida antes de fallar (si avoidObstacles=true)")]
+    [Range(1, 50)] public int maxSpawnAttempts = 8;
 
     private Coroutine routine;
     private SpriteRenderer spriteRenderer;
 
     private void Reset()
     {
-        // valores por defecto útiles
         intervalo = 1f;
         startDelay = 0.5f;
         poolSizePerPrefab = 10;
-        randomizePosition = false;
-        spawnAreaSize = new Vector2(1f, 1f);
+        spawnAreaSize = new Vector2(4f, 2f);
+        circleRadius = 3f;
+        annulusMinRadius = 1f;
+        annulusMaxRadius = 3f;
+        avoidanceCheckRadius = 0.2f;
+        maxSpawnAttempts = 8;
     }
 
     private void Awake()
@@ -54,29 +63,21 @@ public class GeneradorObjectAleatorio : MonoBehaviour
 
     private void Start()
     {
-        // Pre-calentar pools para performance
         if (PoolManager.Instance != null && prefabs != null)
         {
             foreach (var p in prefabs)
-            {
                 if (p != null) PoolManager.Instance.CreatePool(p, poolSizePerPrefab);
-            }
         }
     }
 
     private void OnBecameVisible()
     {
-        // Solo iniciar si no está corriendo ya
         if (routine == null) routine = StartCoroutine(SpawnLoop());
     }
 
     private void OnBecameInvisible()
     {
-        if (routine != null)
-        {
-            StopCoroutine(routine);
-            routine = null;
-        }
+        if (routine != null) { StopCoroutine(routine); routine = null; }
     }
 
     private IEnumerator SpawnLoop()
@@ -92,22 +93,36 @@ public class GeneradorObjectAleatorio : MonoBehaviour
                 if (prefab != null)
                 {
                     Vector3 spawnPos = transform.position;
-                    if (randomizePosition)
-                    {
-                        // genera en el rectángulo local centrado en transform
-                        float rx = (Random.value - 0.5f) * spawnAreaSize.x;
-                        float ry = (Random.value - 0.5f) * spawnAreaSize.y;
-                        spawnPos = transform.TransformPoint(new Vector3(rx, ry, 0f));
-                    }
+                    bool found = false;
 
-                    if (PoolManager.Instance != null)
+                    if (!avoidObstacles)
                     {
-                        PoolManager.Instance.Get(prefab, spawnPos, Quaternion.identity);
+                        spawnPos = CalculateSpawnPosition();
+                        found = true;
                     }
                     else
                     {
-                        Instantiate(prefab, spawnPos, Quaternion.identity);
+                        // intenta varias posiciones hasta encontrar una sin colisión
+                        for (int i = 0; i < maxSpawnAttempts; i++)
+                        {
+                            Vector3 candidate = CalculateSpawnPosition();
+                            if (!Physics2D.OverlapCircle(candidate, avoidanceCheckRadius, avoidanceLayerMask))
+                            {
+                                spawnPos = candidate;
+                                found = true;
+                                break;
+                            }
+                        }
                     }
+
+                    if (found)
+                    {
+                        if (PoolManager.Instance != null)
+                            PoolManager.Instance.Get(prefab, spawnPos, Quaternion.identity);
+                        else
+                            Instantiate(prefab, spawnPos, Quaternion.identity);
+                    }
+                    // si no encontró, se salta spawn esta vez
                 }
             }
 
@@ -115,15 +130,93 @@ public class GeneradorObjectAleatorio : MonoBehaviour
         }
     }
 
-    // Opcional: dibuja el rectángulo de spawn en la escena para facilitar configuración
+    private Vector3 CalculateSpawnPosition()
+    {
+        switch (spawnShape)
+        {
+            case SpawnShape.Point:
+                return transform.position;
+
+            case SpawnShape.Rectangle:
+                // rectángulo en local space centrado en transform
+                float rx = (Random.value - 0.5f) * spawnAreaSize.x;
+                float ry = (Random.value - 0.5f) * spawnAreaSize.y;
+                return transform.TransformPoint(new Vector3(rx, ry, 0f));
+
+            case SpawnShape.Circle:
+                {
+                    // sampling uniforme en círculo (radio máximo = circleRadius)
+                    float angle = Random.value * Mathf.PI * 2f;
+                    float r = Mathf.Sqrt(Random.value) * circleRadius; // sqrt para distribución uniforme
+                    Vector3 local = new Vector3(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r, 0f);
+                    return transform.TransformPoint(local);
+                }
+
+            case SpawnShape.Annulus:
+                {
+                    // sampling uniforme en disco anular entre annulusMinRadius y annulusMaxRadius
+                    float angle = Random.value * Mathf.PI * 2f;
+                    float rMin = annulusMinRadius;
+                    float rMax = Mathf.Max(annulusMaxRadius, rMin + 0.0001f);
+                    // fórmula para uniformidad en área:
+                    float r = Mathf.Sqrt(Random.value * (rMax * rMax - rMin * rMin) + rMin * rMin);
+                    Vector3 local = new Vector3(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r, 0f);
+                    return transform.TransformPoint(local);
+                }
+
+            default:
+                return transform.position;
+        }
+    }
+
     private void OnDrawGizmosSelected()
     {
-        if (!randomizePosition) return;
-        Gizmos.color = new Color(0f, 0.7f, 1f, 0.25f);
-        Vector3 size = new Vector3(spawnAreaSize.x, spawnAreaSize.y, 0f);
+        Gizmos.color = new Color(0f, 0.7f, 1f, 0.15f);
         Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.DrawCube(Vector3.zero, size);
-        Gizmos.color = new Color(0f, 0.7f, 1f, 0.9f);
-        Gizmos.DrawWireCube(Vector3.zero, size);
+
+        switch (spawnShape)
+        {
+            case SpawnShape.Rectangle:
+                Gizmos.DrawCube(Vector3.zero, new Vector3(spawnAreaSize.x, spawnAreaSize.y, 0f));
+                Gizmos.color = new Color(0f, 0.7f, 1f, 0.9f);
+                Gizmos.DrawWireCube(Vector3.zero, new Vector3(spawnAreaSize.x, spawnAreaSize.y, 0f));
+                break;
+
+            case SpawnShape.Circle:
+                Gizmos.DrawSphere(Vector3.zero, circleRadius);
+                Gizmos.color = new Color(0f, 0.7f, 1f, 0.9f);
+                DrawWireCircle(Vector3.zero, circleRadius);
+                break;
+
+            case SpawnShape.Annulus:
+                // dibujamos anillo con dos círculos (externo e interno)
+                Gizmos.DrawSphere(Vector3.zero, annulusMaxRadius);
+                Gizmos.color = new Color(0f, 0.7f, 1f, 0.9f);
+                DrawWireCircle(Vector3.zero, annulusMaxRadius);
+                Gizmos.color = new Color(0f, 0.7f, 1f, 0.15f);
+                Gizmos.DrawSphere(Vector3.zero, annulusMinRadius);
+                Gizmos.color = new Color(0f, 0.7f, 1f, 0.9f);
+                DrawWireCircle(Vector3.zero, annulusMinRadius);
+                break;
+
+            case SpawnShape.Point:
+                Gizmos.color = new Color(0f, 0.7f, 1f, 0.9f);
+                Gizmos.DrawSphere(Vector3.zero, 0.1f);
+                break;
+        }
+    }
+
+    // helper simple para dibujar círculo con líneas
+    private void DrawWireCircle(Vector3 center, float radius, int segments = 40)
+    {
+        float step = 2f * Mathf.PI / segments;
+        Vector3 prev = center + new Vector3(Mathf.Cos(0f), Mathf.Sin(0f), 0f) * radius;
+        for (int i = 1; i <= segments; i++)
+        {
+            float ang = step * i;
+            Vector3 next = center + new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0f) * radius;
+            Gizmos.DrawLine(prev, next);
+            prev = next;
+        }
     }
 }
