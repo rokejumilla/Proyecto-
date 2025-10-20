@@ -420,6 +420,14 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Target
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 7673770188093849413, guid: 00732b2c1f814404fa0600428d00f0ab, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 7673770188093849413, guid: 00732b2c1f814404fa0600428d00f0ab, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 40
+      objectReference: {fileID: 0}
     - target: {fileID: 7902364349089389927, guid: 00732b2c1f814404fa0600428d00f0ab, type: 3}
       propertyPath: m_Name
       value: Canvas

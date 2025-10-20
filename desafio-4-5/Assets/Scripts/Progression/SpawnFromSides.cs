@@ -14,6 +14,9 @@ public class SpawnFromSides : MonoBehaviour
     [SerializeField] private bool randomSideEachSpawn = true; // ya no se usa para elegir lado, queda como opción estética
     [SerializeField] private bool useRendererIfNoCollider = true;
 
+    // NUEVO: solo empezar a spawnear una vez que la cámara "sienta" este objeto
+    private bool startedSpawning = false;
+
     private Collider2D col2D;
     private Renderer rend;
 
@@ -29,6 +32,32 @@ public class SpawnFromSides : MonoBehaviour
 
     private void Start()
     {
+        // Si ya está en vista de cámara al Start, arrancar inmediatamente.
+        if (IsSeenByCamera())
+        {
+            StartSpawning();
+        }
+        // Si no está visible aún, no arrancamos; Update() vigilará cuando entre en vista.
+    }
+
+    private void Update()
+    {
+        // Si no arrancamos aún, comprobar cada frame si la cámara nos ve
+        if (!startedSpawning)
+        {
+            if (IsSeenByCamera())
+            {
+                StartSpawning();
+            }
+        }
+    }
+
+    // Método que inicia la rutina de spawn (coroutine o InvokeRepeating según la opción)
+    private void StartSpawning()
+    {
+        if (startedSpawning) return;
+        startedSpawning = true;
+
         if (useCoroutine)
             StartCoroutine(SpawnLoop());
         else
@@ -121,6 +150,26 @@ public class SpawnFromSides : MonoBehaviour
         int s = sequentialSide;
         sequentialSide = (sequentialSide + 1) % 4;
         return s;
+    }
+
+    // Comprueba si la cámara principal (Camera.main) "ve" los bounds de este objeto.
+    private bool IsSeenByCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+            cam = Camera.current; // fallback
+
+        if (cam == null)
+            return false; // si no hay cámara, no podemos detectar visibilidad
+
+        Bounds b;
+        if (col2D != null) b = col2D.bounds;
+        else if (rend != null) b = rend.bounds;
+        else b = new Bounds(transform.position, Vector3.one);
+
+        // usar frustum planes para determinar si el bounds está dentro del view frustum
+        Plane[] planes = GeometryUtility.CalculateFrustumPlanes(cam);
+        return GeometryUtility.TestPlanesAABB(planes, b);
     }
 
     // Gizmos para visualizar bounds y un ejemplo de punto de spawn ARRIBA
