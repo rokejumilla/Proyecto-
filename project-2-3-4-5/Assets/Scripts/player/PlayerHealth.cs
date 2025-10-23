@@ -3,8 +3,8 @@ using UnityEngine.Events;
 
 public class PlayerHealth : MonoBehaviour
 {
-    [SerializeField]
-    private int lives = 5;
+    [SerializeField] private int lives = 5;
+    [SerializeField] private int maxLives = 5; // opcional: tope de vidas
 
     // Event que notifica la cantidad de vidas (int)
     public UnityEvent<int> OnLivesChanged;
@@ -14,13 +14,13 @@ public class PlayerHealth : MonoBehaviour
 
     private void Awake()
     {
-        // Aseguramos que el evento no sea null (esto evita NullReferenceException al invocar)
         if (OnLivesChanged == null) OnLivesChanged = new UnityEvent<int>();
+        // asegurar que maxLives no sea menor que lives
+        if (maxLives < lives) maxLives = lives;
     }
 
     private void Start()
     {
-        // Emitimos el estado inicial para que el HUD muestre el valor al comenzar la escena
         OnLivesChanged.Invoke(lives);
     }
 
@@ -31,8 +31,17 @@ public class PlayerHealth : MonoBehaviour
 
         if (lives <= 0)
         {
-            // Aquí puedes manejar la situación de Game Over
             Debug.Log("Game Over");
+            // manejar Game Over aquí
         }
+    }
+
+    // --- NUEVO: método público para sumar vidas ---
+    public void AddLife(int amount)
+    {
+        if (amount <= 0) return;
+        lives = Mathf.Min(lives + amount, maxLives);
+        OnLivesChanged.Invoke(lives);
+        Debug.Log($"[PlayerHealth] +{amount} vidas. Vidas actuales: {lives}/{maxLives}");
     }
 }
